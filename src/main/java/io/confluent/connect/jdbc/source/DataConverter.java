@@ -436,7 +436,8 @@ public class DataConverter {
           scale = 127;
         }
         BigDecimal bigDecimalValue = resultSet.getBigDecimal(col, scale);
-        colValue = stringifyDecimals ? bigDecimalValue.toString() : bigDecimalValue;
+        colValue = stringifyDecimals && bigDecimalValue != null ? bigDecimalValue.toString() :
+                  bigDecimalValue;
         break;
       }
 
