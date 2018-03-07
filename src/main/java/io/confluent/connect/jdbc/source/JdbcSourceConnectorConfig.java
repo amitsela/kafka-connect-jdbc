@@ -89,6 +89,12 @@ public class JdbcSourceConnectorConfig extends AbstractConfig {
   public static final boolean NUMERIC_PRECISION_MAPPING_DEFAULT = false;
   private static final String NUMERIC_PRECISION_MAPPING_DISPLAY = "Map Numeric Values By Precision";
 
+  public static final String DECIMAL_STRING_MAPPING_CONFIG = "decimal.string.mapping";
+  private static final String DECIMAL_STRING_MAPPING_DOC =
+      "Whether or not to attempt mapping DECIMAL values into a string";
+  public static final boolean DECIMAL_STRING_MAPPING_DEFAULT = false;
+  private static final String DECIMAL_STRING_MAPPING_DISPLAY = "Map Decimal Values into a String";
+
   public static final String MODE_CONFIG = "mode";
   private static final String MODE_DOC =
       "The mode for updating a table each time it is polled. Options include:\n"
@@ -321,7 +327,17 @@ public class JdbcSourceConnectorConfig extends AbstractConfig {
         DATABASE_GROUP,
         4,
         Width.SHORT,
-        NUMERIC_PRECISION_MAPPING_DISPLAY);
+        NUMERIC_PRECISION_MAPPING_DISPLAY
+    ).define(
+        DECIMAL_STRING_MAPPING_CONFIG,
+        Type.BOOLEAN,
+        DECIMAL_STRING_MAPPING_DEFAULT,
+        Importance.LOW,
+        DECIMAL_STRING_MAPPING_DOC,
+        DATABASE_GROUP,
+        4,
+        Width.SHORT,
+        DECIMAL_STRING_MAPPING_DISPLAY);
   }
 
   private static final void addModeOptions(ConfigDef config) {
