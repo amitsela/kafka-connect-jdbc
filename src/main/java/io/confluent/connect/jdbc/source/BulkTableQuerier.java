@@ -37,8 +37,8 @@ public class BulkTableQuerier extends TableQuerier {
   private static final Logger log = LoggerFactory.getLogger(BulkTableQuerier.class);
 
   public BulkTableQuerier(QueryMode mode, String name, String schemaPattern,
-                          String topicPrefix, boolean mapNumerics) {
-    super(mode, name, topicPrefix, schemaPattern, mapNumerics);
+                          String topicPrefix, boolean mapNumerics, boolean stringifyDecimals) {
+    super(mode, name, topicPrefix, schemaPattern, mapNumerics, stringifyDecimals);
   }
 
   @Override
@@ -66,7 +66,7 @@ public class BulkTableQuerier extends TableQuerier {
 
   @Override
   public SourceRecord extractRecord() throws SQLException {
-    Struct record = DataConverter.convertRecord(schema, resultSet, mapNumerics);
+    Struct record = DataConverter.convertRecord(schema, resultSet, mapNumerics, stringifyDecimals);
     // TODO: key from primary key? partition?
     final String topic;
     final Map<String, String> partition;

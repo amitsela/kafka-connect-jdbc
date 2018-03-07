@@ -44,19 +44,21 @@ abstract class TableQuerier implements Comparable<TableQuerier> {
   // Mutable state
 
   protected final boolean mapNumerics;
+  protected final boolean stringifyDecimals;
   protected long lastUpdate;
   protected PreparedStatement stmt;
   protected ResultSet resultSet;
   protected Schema schema;
 
   public TableQuerier(QueryMode mode, String nameOrQuery, String topicPrefix,
-                      String schemaPattern, boolean mapNumerics) {
+                      String schemaPattern, boolean mapNumerics, boolean stringifyDecimals) {
     this.mode = mode;
     this.schemaPattern = schemaPattern;
     this.name = mode.equals(QueryMode.TABLE) ? nameOrQuery : null;
     this.query = mode.equals(QueryMode.QUERY) ? nameOrQuery : null;
     this.topicPrefix = topicPrefix;
     this.mapNumerics = mapNumerics;
+    this.stringifyDecimals = stringifyDecimals;
     this.lastUpdate = 0;
   }
 
@@ -82,7 +84,8 @@ abstract class TableQuerier implements Comparable<TableQuerier> {
     if (resultSet == null) {
       stmt = getOrCreatePreparedStatement(db);
       resultSet = executeQuery();
-      schema = DataConverter.convertSchema(name, resultSet.getMetaData(), mapNumerics);
+      schema = DataConverter.convertSchema(name, resultSet.getMetaData(),
+                                           mapNumerics, stringifyDecimals);
     }
   }
 
