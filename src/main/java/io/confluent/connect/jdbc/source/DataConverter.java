@@ -27,6 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.net.URL;
 import java.sql.Blob;
 import java.sql.Clob;
@@ -48,24 +49,29 @@ public class DataConverter {
   public static Schema convertSchema(
       String tableName,
       ResultSetMetaData metadata,
-      boolean mapNumerics
+      boolean mapNumerics,
+      boolean stringifyDecimals
   ) throws SQLException {
     // TODO: Detect changes to metadata, which will require schema updates
     SchemaBuilder builder = SchemaBuilder.struct().name(tableName);
     for (int col = 1; col <= metadata.getColumnCount(); col++) {
-      addFieldSchema(metadata, col, builder, mapNumerics);
+      addFieldSchema(metadata, col, builder, mapNumerics, stringifyDecimals);
     }
     return builder.build();
   }
 
-  public static Struct convertRecord(Schema schema, ResultSet resultSet, boolean mapNumerics)
-      throws SQLException {
+  public static Struct convertRecord(
+      Schema schema,
+      ResultSet resultSet,
+      boolean mapNumerics,
+      boolean stringifyDecimals
+  ) throws SQLException {
     ResultSetMetaData metadata = resultSet.getMetaData();
     Struct struct = new Struct(schema);
     for (int col = 1; col <= metadata.getColumnCount(); col++) {
       try {
         convertFieldValue(resultSet, col, metadata.getColumnType(col), struct,
-                          metadata.getColumnLabel(col), mapNumerics);
+                          metadata.getColumnLabel(col), mapNumerics, stringifyDecimals);
       } catch (IOException e) {
         log.warn("Ignoring record because processing failed:", e);
       } catch (SQLException e) {
@@ -76,9 +82,13 @@ public class DataConverter {
   }
 
 
-  private static void addFieldSchema(ResultSetMetaData metadata, int col,
-                                     SchemaBuilder builder, boolean mapNumerics)
-      throws SQLException {
+  private static void addFieldSchema(
+      ResultSetMetaData metadata,
+      int col,
+      SchemaBuilder builder,
+      boolean mapNumerics,
+      boolean stringifyDecimals
+  ) throws SQLException {
     // Label is what the query requested the column name be using an "AS" clause, name is the
     // original
     String label = metadata.getColumnLabel(col);
@@ -227,17 +237,20 @@ public class DataConverter {
         // fallthrough
 
       case Types.DECIMAL: {
-        int scale = metadata.getScale(col);
-        if (scale == -127) { //NUMBER without precision defined for OracleDB
-          scale = 127;
+        if (!stringifyDecimals) {
+          int scale = metadata.getScale(col);
+          if (scale == -127) { //NUMBER without precision defined for OracleDB
+            scale = 127;
+          }
+          SchemaBuilder fieldBuilder = Decimal.builder(scale);
+          if (optional) {
+            fieldBuilder.optional();
+          }
+          builder.field(fieldName, fieldBuilder.build());
+          break;
         }
-        SchemaBuilder fieldBuilder = Decimal.builder(scale);
-        if (optional) {
-          fieldBuilder.optional();
-        }
-        builder.field(fieldName, fieldBuilder.build());
-        break;
       }
+      // fallthrough
 
       case Types.CHAR:
       case Types.VARCHAR:
@@ -317,9 +330,15 @@ public class DataConverter {
     }
   }
 
-  private static void convertFieldValue(ResultSet resultSet, int col, int colType,
-                                        Struct struct, String fieldName, boolean mapNumerics)
-      throws SQLException, IOException {
+  private static void convertFieldValue(
+      ResultSet resultSet,
+      int col,
+      int colType,
+      Struct struct,
+      String fieldName,
+      boolean mapNumerics,
+      boolean stringifyDecimals
+  ) throws SQLException, IOException {
     final Object colValue;
     switch (colType) {
       case Types.NULL: {
@@ -416,7 +435,8 @@ public class DataConverter {
         if (scale == -127) {
           scale = 127;
         }
-        colValue = resultSet.getBigDecimal(col, scale);
+        BigDecimal bigDecimalValue = resultSet.getBigDecimal(col, scale);
+        colValue = stringifyDecimals ? bigDecimalValue.toString() : bigDecimalValue;
         break;
       }
 
